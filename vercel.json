@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/evaluate_admet", "destination": "/api/evaluate_admet" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

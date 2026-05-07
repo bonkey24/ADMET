@@ -81,7 +81,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const data     = Object.fromEntries(formData.entries());
 
         try {
-            const response = await fetch('http://localhost:5000/api/evaluate_admet', {
+            // Auto-detect environment: use local Flask in dev, Vercel serverless in production
+        const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+        const API_URL = isLocal
+            ? 'http://localhost:5000/api/evaluate_admet'
+            : '/api/evaluate_admet';
+
+        const response = await fetch(API_URL, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body:    JSON.stringify(data)
