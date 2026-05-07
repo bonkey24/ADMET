@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ADMET Risk Profiler — Evaluate drug-likeness and pharmacological safety using Lipinski's Rule of Five and advanced ADMET criteria.">
+    <title>ADMET Risk Profiler | Drug-Likeness Evaluator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js for radar chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Animated background -->
+    <div class="bg-orbs" aria-hidden="true">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="orb orb-4"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="header-badge">Pharmacology Tool</div>
+            <h1>ADMET Risk Profiler</h1>
+            <p>Advanced drug-likeness evaluation based on Lipinski's Rule of Five and multi-parameter pharmacological analysis.</p>
+            <div class="header-chips">
+                <span class="chip">Lipinski Rule of 5</span>
+                <span class="chip">CYP450 Metabolism</span>
+                <span class="chip">hERG Cardiotoxicity</span>
+                <span class="chip">Renal Clearance</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- ═══ LEFT: Input Panel ═══ -->
+            <aside class="input-panel">
+                <div class="panel-header">
+                    <h2>Compound Properties</h2>
+                    <p class="panel-subtitle">Enter molecular descriptors below</p>
+                </div>
+
+                <form id="admet-form" novalidate>
+                    <!-- Drug Name -->
+                    <div class="form-group">
+                        <label for="drug_name">
+                            Compound / Drug Name
+                            <span class="tooltip-icon" data-tip="Give your compound a name to track it in the analysis history.">?</span>
+                        </label>
+                        <input type="text" id="drug_name" name="drug_name" placeholder="e.g., Aspirin">
+                    </div>
+
+                    <div class="form-divider">Core Lipinski Parameters</div>
+
+                    <!-- MW -->
+                    <div class="form-group">
+                        <label for="weight">
+                            Molecular Weight (Da)
+                            <span class="tooltip-icon" data-tip="Sum of atomic masses. Lipinski limit: ≤ 500 Da. Ideal: ≤ 400 Da.">?</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="weight" name="weight" step="0.1" min="0" required placeholder="e.g., 300">
+                            <span class="input-unit">Da</span>
+                        </div>
+                        <div class="range-bar-wrap">
+                            <div class="range-bar" id="bar-weight"></div>
+                            <span class="range-label">≤ 500 Da</span>
+                        </div>
+                    </div>
+
+                    <!-- LogP -->
+                    <div class="form-group">
+                        <label for="logp">
+                            LogP (Lipophilicity)
+                            <span class="tooltip-icon" data-tip="Octanol-water partition coefficient. Ideal range: 1–3. Lipinski limit: ≤ 5.">?</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="logp" name="logp" step="0.1" required placeholder="e.g., 2.5">
+                            <span class="input-unit">log</span>
+                        </div>
+                        <div class="range-bar-wrap">
+                            <div class="range-bar" id="bar-logp"></div>
+                            <span class="range-label">≤ 5</span>
+                        </div>
+                    </div>
+
+                    <!-- H Donors -->
+                    <div class="form-group">
+                        <label for="h_donors">
+                            H-Bond Donors
+                            <span class="tooltip-icon" data-tip="Count of –OH and –NH groups. Lipinski limit: ≤ 5. Ideal: ≤ 3.">?</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="h_donors" name="h_donors" min="0" required placeholder="e.g., 2">
+                            <span class="input-unit">HBD</span>
+                        </div>
+                        <div class="range-bar-wrap">
+                            <div class="range-bar" id="bar-hbd"></div>
+                            <span class="range-label">≤ 5</span>
+                        </div>
+                    </div>
+
+                    <!-- H Acceptors -->
+                    <div class="form-group">
+                        <label for="h_acceptors">
+                            H-Bond Acceptors
+                            <span class="tooltip-icon" data-tip="Count of N and O atoms. Lipinski limit: ≤ 10. Ideal: ≤ 7.">?</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="h_acceptors" name="h_acceptors" min="0" required placeholder="e.g., 4">
+                            <span class="input-unit">HBA</span>
+                        </div>
+                        <div class="range-bar-wrap">
+                            <div class="range-bar" id="bar-hba"></div>
+                            <span class="range-label">≤ 10</span>
+                        </div>
+                    </div>
+
+                    <div class="form-divider">Advanced Parameters</div>
+
+                    <!-- Rotatable Bonds -->
+                    <div class="form-group">
+                        <label for="rotatable_bonds">
+                            Rotatable Bonds
+                            <span class="tooltip-icon" data-tip="Number of rotatable single bonds. High flexibility (>10) reduces oral bioavailability. Veber rule: ≤ 10.">?</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="rotatable_bonds" name="rotatable_bonds" min="0" required placeholder="e.g., 5">
+                            <span class="input-unit">RB</span>
+                        </div>
+                    </div>
+
+                    <!-- PSA -->
+                    <div class="form-group">
+                        <label for="psa">
+                            Polar Surface Area (Å²)
+                            <span class="tooltip-icon" data-tip="Sum of surfaces of polar atoms. Veber rule: ≤ 140 Å². CNS penetration: ≤ 90 Å².">?</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input type="number" id="psa" name="psa" step="0.1" min="0" required placeholder="e.g., 60">
+                            <span class="input-unit">Å²</span>
+                        </div>
+                    </div>
+
+                    <div class="form-divider">Qualitative Assessments</div>
+
+                    <!-- Solubility -->
+                    <div class="form-group">
+                        <label for="solubility">
+                            Aqueous Solubility
+                            <span class="tooltip-icon" data-tip="Estimated water solubility. Poor solubility limits both GI absorption and renal clearance.">?</span>
+                        </label>
+                        <select id="solubility" name="solubility" required>
+                            <option value="" disabled selected>Select solubility level</option>
+                            <option value="high">High (&gt; 1 mg/mL)</option>
+                            <option value="moderate">Moderate (0.1 – 1 mg/mL)</option>
+                            <option value="poor">Poor (&lt; 0.1 mg/mL)</option>
+                        </select>
+                    </div>
+
+                    <!-- Enzyme -->
+                    <div class="form-group">
+                        <label for="enzyme">
+                            CYP450 Liver Enzyme Interference
+                            <span class="tooltip-icon" data-tip="Degree of CYP450 enzyme inhibition or induction. High interference reduces bioavailability and can cause drug-drug interactions.">?</span>
+                        </label>
+                        <select id="enzyme" name="enzyme" required>
+                            <option value="" disabled selected>Select interference level</option>
+                            <option value="low">Low (minimal CYP interaction)</option>
+                            <option value="moderate">Moderate (some CYP interaction)</option>
+                            <option value="high">High (significant CYP inhibitor)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="run-btn">
+                        <span class="btn-icon">⚗</span>
+                        Run ADMET Analysis
+                    </button>
+
+                    <button type="button" class="btn-secondary" id="clear-btn">Clear Form</button>
+                </form>
+
+                <!-- Reference Panel -->
+                <div class="reference-box">
+                    <h3>📚 Lipinski's Rule of Five</h3>
+                    <table class="ref-table">
+                        <tr><td>Molecular Weight</td><td>≤ 500 Da</td></tr>
+                        <tr><td>LogP</td><td>≤ 5</td></tr>
+                        <tr><td>H-Bond Donors</td><td>≤ 5</td></tr>
+                        <tr><td>H-Bond Acceptors</td><td>≤ 10</td></tr>
+                    </table>
+                    <p class="ref-note">Violations suggest poor oral bioavailability. Two or more violations = high risk.</p>
+                </div>
+            </aside>
+
+            <!-- ═══ RIGHT: Results Panel ═══ -->
+            <section class="results-panel" id="results-panel">
+
+                <!-- Overall Score -->
+                <div class="overall-score-card" id="overall-score-card">
+                    <div class="score-left">
+                        <p class="score-label">Overall Drug-Likeness Score</p>
+                        <h2 class="score-number" id="overall-score">—</h2>
+                        <div class="score-verdict" id="overall-verdict">Awaiting Analysis</div>
+                        <div class="violations-row" id="violations-row"></div>
+                    </div>
+                    <div class="score-right">
+                        <canvas id="radar-chart" width="220" height="220"></canvas>
+                    </div>
+                </div>
+
+                <!-- ADMET Cards Grid -->
+                <h2 class="section-title">ADMET Safety Profile</h2>
+                <div class="dashboard" id="dashboard">
+                    <div class="card" id="card-absorption">
+                        <div class="card-icon">💊</div>
+                        <div class="card-content">
+                            <div class="card-top">
+                                <h3>Absorption</h3>
+                                <div class="status-badge">Pending</div>
+                            </div>
+                            <div class="score-bar-wrap">
+                                <div class="score-bar" id="sbar-absorption"></div>
+                                <span class="score-num" id="snum-absorption">—</span>
+                            </div>
+                            <p class="message">Waiting for input...</p>
+                            <details class="card-detail">
+                                <summary>Learn more</summary>
+                                <p class="detail-text" id="detail-absorption">Run analysis to see details.</p>
+                                <p class="tip-text" id="tip-absorption"></p>
+                                <p class="rule-text" id="rule-absorption"></p>
+                            </details>
+                        </div>
+                    </div>
+
+                    <div class="card" id="card-distribution">
+                        <div class="card-icon">🔬</div>
+                        <div class="card-content">
+                            <div class="card-top">
+                                <h3>Distribution</h3>
+                                <div class="status-badge">Pending</div>
+                            </div>
+                            <div class="score-bar-wrap">
+                                <div class="score-bar" id="sbar-distribution"></div>
+                                <span class="score-num" id="snum-distribution">—</span>
+                            </div>
+                            <p class="message">Waiting for input...</p>
+                            <details class="card-detail">
+                                <summary>Learn more</summary>
+                                <p class="detail-text" id="detail-distribution">Run analysis to see details.</p>
+                                <p class="tip-text" id="tip-distribution"></p>
+                                <p class="rule-text" id="rule-distribution"></p>
+                            </details>
+                        </div>
+                    </div>
+
+                    <div class="card" id="card-metabolism">
+                        <div class="card-icon">🧬</div>
+                        <div class="card-content">
+                            <div class="card-top">
+                                <h3>Metabolism</h3>
+                                <div class="status-badge">Pending</div>
+                            </div>
+                            <div class="score-bar-wrap">
+                                <div class="score-bar" id="sbar-metabolism"></div>
+                                <span class="score-num" id="snum-metabolism">—</span>
+                            </div>
+                            <p class="message">Waiting for input...</p>
+                            <details class="card-detail">
+                                <summary>Learn more</summary>
+                                <p class="detail-text" id="detail-metabolism">Run analysis to see details.</p>
+                                <p class="tip-text" id="tip-metabolism"></p>
+                                <p class="rule-text" id="rule-metabolism"></p>
+                            </details>
+                        </div>
+                    </div>
+
+                    <div class="card" id="card-excretion">
+                        <div class="card-icon">🫁</div>
+                        <div class="card-content">
+                            <div class="card-top">
+                                <h3>Excretion</h3>
+                                <div class="status-badge">Pending</div>
+                            </div>
+                            <div class="score-bar-wrap">
+                                <div class="score-bar" id="sbar-excretion"></div>
+                                <span class="score-num" id="snum-excretion">—</span>
+                            </div>
+                            <p class="message">Waiting for input...</p>
+                            <details class="card-detail">
+                                <summary>Learn more</summary>
+                                <p class="detail-text" id="detail-excretion">Run analysis to see details.</p>
+                                <p class="tip-text" id="tip-excretion"></p>
+                                <p class="rule-text" id="rule-excretion"></p>
+                            </details>
+                        </div>
+                    </div>
+
+                    <div class="card" id="card-toxicity">
+                        <div class="card-icon">☣️</div>
+                        <div class="card-content">
+                            <div class="card-top">
+                                <h3>Toxicity</h3>
+                                <div class="status-badge">Pending</div>
+                            </div>
+                            <div class="score-bar-wrap">
+                                <div class="score-bar" id="sbar-toxicity"></div>
+                                <span class="score-num" id="snum-toxicity">—</span>
+                            </div>
+                            <p class="message">Waiting for input...</p>
+                            <details class="card-detail">
+                                <summary>Learn more</summary>
+                                <p class="detail-text" id="detail-toxicity">Run analysis to see details.</p>
+                                <p class="tip-text" id="tip-toxicity"></p>
+                                <p class="rule-text" id="rule-toxicity"></p>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis History -->
+                <div class="history-section" id="history-section" style="display:none">
+                    <h2 class="section-title">Analysis History</h2>
+                    <div class="history-list" id="history-list"></div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>ADMET Risk Profiler · Based on Lipinski's Rule of Five · For educational use only.</p>
+        </footer>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip-popup" id="tooltip-popup"></div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
