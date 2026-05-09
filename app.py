@@ -38,7 +38,9 @@ def evaluate_properties(data):
         weight          = float(data.get('weight', 0))
         logp            = float(data.get('logp', 0))
         solubility      = data.get('solubility', '').lower()
-        enzyme          = data.get('enzyme', '').lower()
+        gi_absorption   = data.get('gi_absorption', '').lower()      # high | low
+        bioavailability = float(data.get('bioavailability', 0.55))   # 0–1 score
+        bbb_permeability= data.get('bbb_permeability', '').lower()   # yes | no
         h_donors        = int(data.get('h_donors', 0))
         h_acceptors     = int(data.get('h_acceptors', 0))
         rotatable_bonds = int(data.get('rotatable_bonds', 0))
@@ -63,14 +65,30 @@ def evaluate_properties(data):
         abs_status = 'Warning' if abs_status == 'Pass' else abs_status
         abs_score  = get_score_for_property(weight, 500, 400)
 
+    if gi_absorption == 'low':
+        abs_issues.append('Low GI absorption predicted; drug is poorly absorbed from the gastrointestinal tract.')
+        abs_status = 'Fail'
+        abs_score  = min(abs_score, 30)
+    elif gi_absorption == 'high':
+        pass  # favourable — no penalty
+
     if solubility == 'poor':
-        abs_issues.append('Poor aqueous solubility dramatically limits gastrointestinal absorption.')
+        abs_issues.append('Poor water solubility dramatically limits gastrointestinal absorption.')
         abs_status = 'Fail'
         abs_score  = min(abs_score, 20)
     elif solubility == 'moderate':
-        abs_issues.append('Moderate solubility may reduce bioavailability.')
+        abs_issues.append('Moderate water solubility may reduce bioavailability.')
         abs_status = 'Warning' if abs_status == 'Pass' else abs_status
         abs_score  = min(abs_score, 60)
+
+    if bioavailability < 0.55:
+        abs_issues.append(f'Bioavailability score ({bioavailability:.2f}) is below the 0.55 threshold; poor oral bioavailability expected.')
+        abs_status = 'Fail' if abs_status == 'Pass' or abs_status == 'Warning' else abs_status
+        abs_score  = min(abs_score, max(10, int(bioavailability * 100)))
+    elif bioavailability < 0.70:
+        abs_issues.append(f'Bioavailability score ({bioavailability:.2f}) is borderline; moderate oral bioavailability.')
+        abs_status = 'Warning' if abs_status == 'Pass' else abs_status
+        abs_score  = min(abs_score, 65)
 
     if psa > 140:
         abs_issues.append(f'PSA ({psa} Å²) is too high; oral absorption decreases significantly above 140 Å².')
@@ -86,9 +104,9 @@ def evaluate_properties(data):
         'status':  abs_status,
         'score':   abs_score if abs_status != 'Pass' else 100,
         'message': '; '.join(abs_issues) if abs_issues else 'Excellent oral absorption predicted.',
-        'detail':  'Absorption governs how much of the drug reaches systemic circulation. Lipinski\'s Rule of Five (MW ≤ 500, LogP ≤ 5, HBD ≤ 5, HBA ≤ 10) is the gold standard for oral bioavailability.',
-        'tips':    'Consider prodrug strategies or nanoformulations if MW or solubility are limiting.' if abs_status != 'Pass' else 'Compound shows good oral bioavailability potential.',
-        'rule':    'Lipinski Rule of Five'
+        'detail':  'Absorption governs how much of the drug reaches systemic circulation. Key factors: GI absorption, water solubility, bioavailability score, MW, and PSA. Lipinski\'s Rule of Five (MW ≤ 500, LogP ≤ 5, HBD ≤ 5, HBA ≤ 10) is the gold standard for oral bioavailability.',
+        'tips':    'Consider prodrug strategies or nanoformulations if MW, solubility, or bioavailability score are limiting.' if abs_status != 'Pass' else 'Compound shows good oral bioavailability potential.',
+        'rule':    'Lipinski Rule of Five + GI Absorption + Bioavailability Score'
     }
 
     # ── Distribution (D) ──────────────────────────────────────────────────────
@@ -114,13 +132,23 @@ def evaluate_properties(data):
         dist_status = 'Warning' if dist_status == 'Pass' else dist_status
         dist_score  = min(dist_score, 65)
 
+    if bbb_permeability == 'yes':
+        if psa > 90 or logp < 0:
+            dist_issues.append('BBB-permeable but high PSA or low LogP may limit actual CNS penetration — verify in vitro.')
+            dist_status = 'Warning' if dist_status == 'Pass' else dist_status
+            dist_score  = min(dist_score, 70)
+        else:
+            dist_issues.append('BBB permeable: drug is predicted to cross the blood-brain barrier — desirable for CNS targets.')
+    elif bbb_permeability == 'no':
+        dist_issues.append('Drug does not cross the BBB — suitable for peripheral targets with reduced CNS side-effect risk.')
+
     results['Distribution'] = {
         'status':  dist_status,
         'score':   dist_score if dist_status != 'Pass' else 100,
-        'message': '; '.join(dist_issues) if dist_issues else 'Good lipophilicity profile for tissue distribution.',
-        'detail':  'Distribution describes how a drug spreads into body compartments. LogP measures partition between octanol/water; ideal range is 1–3. High PSA (>90 Å²) limits CNS penetration.',
-        'tips':    'Reduce lipophilicity via introduction of polar groups or salt forms.' if dist_status != 'Pass' else 'LogP is within ideal range for systemic distribution.',
-        'rule':    'LogP ≤ 5, PSA ≤ 90 Å² (CNS)'
+        'message': '; '.join(dist_issues) if dist_issues else 'Good lipophilicity and BBB profile for tissue distribution.',
+        'detail':  'Distribution describes how a drug spreads into body compartments. LogP measures partition between octanol/water; ideal range is 1–3. BBB permeability governs CNS access. High PSA (>90 Å²) limits CNS penetration.',
+        'tips':    'Reduce lipophilicity via introduction of polar groups or salt forms.' if dist_status not in ('Pass',) else 'LogP and BBB profile are within ideal range for systemic distribution.',
+        'rule':    'LogP ≤ 5, PSA ≤ 90 Å² (CNS), BBB Permeability'
     }
 
     # ── Metabolism (M) ────────────────────────────────────────────────────────
@@ -128,27 +156,28 @@ def evaluate_properties(data):
     met_status = 'Pass'
     met_score  = 100
 
-    if enzyme == 'high':
-        met_issues.append('High CYP450 enzyme interference: rapid first-pass metabolism expected, reducing bioavailability.')
-        met_status = 'Warning'
-        met_score  = 40
-    elif enzyme == 'moderate':
-        met_issues.append('Moderate enzyme interference: monitor for drug-drug interactions.')
-        met_status = 'Warning'
-        met_score  = 70
-
     if rotatable_bonds > 7:
         met_issues.append(f'High rotatable bonds ({rotatable_bonds}) often correlates with increased metabolic instability.')
-        met_status = 'Warning' if met_status == 'Pass' else met_status
+        met_status = 'Warning'
         met_score  = min(met_score, 65)
+
+    if bioavailability < 0.55:
+        met_issues.append(f'Low bioavailability score ({bioavailability:.2f}) suggests significant first-pass metabolic clearance.')
+        met_status = 'Warning' if met_status == 'Pass' else met_status
+        met_score  = min(met_score, 50)
+
+    if solubility == 'poor':
+        met_issues.append('Poor water solubility may cause erratic metabolic behaviour due to dissolution-limited absorption.')
+        met_status = 'Warning' if met_status == 'Pass' else met_status
+        met_score  = min(met_score, 60)
 
     results['Metabolism'] = {
         'status':  met_status,
         'score':   met_score if met_status != 'Pass' else 100,
-        'message': '; '.join(met_issues) if met_issues else 'Low metabolic interference expected.',
-        'detail':  'Metabolism primarily occurs in the liver via CYP450 enzymes (CYP3A4, CYP2D6, etc.). Inhibition or induction of these enzymes can cause dangerous drug-drug interactions.',
-        'tips':    'Consider structural modifications to reduce CYP liability or evaluate prodrug approaches.' if met_status != 'Pass' else 'Compound appears metabolically stable.',
-        'rule':    'CYP450 Enzyme Interference & Metabolic Stability'
+        'message': '; '.join(met_issues) if met_issues else 'Metabolic stability appears adequate.',
+        'detail':  'Metabolism primarily occurs in the liver. Key predictors include rotatable bond count (molecular flexibility), bioavailability score (first-pass effect proxy), and water solubility (dissolution-limited clearance). Low bioavailability often signals high first-pass metabolism.',
+        'tips':    'Consider rigidifying the scaffold (fewer rotatable bonds) or optimising solubility to improve metabolic stability.' if met_status != 'Pass' else 'Compound appears metabolically stable based on structural parameters.',
+        'rule':    'Rotatable Bonds ≤ 7, Bioavailability Score ≥ 0.55'
     }
 
     # ── Excretion (E) ─────────────────────────────────────────────────────────

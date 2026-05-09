@@ -28,7 +28,7 @@
             <p>Advanced drug-likeness evaluation based on Lipinski's Rule of Five and multi-parameter pharmacological analysis.</p>
             <div class="header-chips">
                 <span class="chip">Lipinski Rule of 5</span>
-                <span class="chip">CYP450 Metabolism</span>
+                <span class="chip">GI Absorption</span>
                 <span class="chip">hERG Cardiotoxicity</span>
                 <span class="chip">Renal Clearance</span>
             </div>
@@ -146,11 +146,24 @@
 
                     <div class="form-divider">Qualitative Assessments</div>
 
-                    <!-- Solubility -->
+                    <!-- GI Absorption -->
+                    <div class="form-group">
+                        <label for="gi_absorption">
+                            GI Absorption
+                            <span class="tooltip-icon" data-tip="Predicted gastrointestinal absorption. High absorption indicates the drug is well-absorbed through the gut wall into systemic circulation.">?</span>
+                        </label>
+                        <select id="gi_absorption" name="gi_absorption" required>
+                            <option value="" disabled selected>Select GI absorption level</option>
+                            <option value="high">High (well absorbed)</option>
+                            <option value="low">Low (poorly absorbed)</option>
+                        </select>
+                    </div>
+
+                    <!-- Water Solubility -->
                     <div class="form-group">
                         <label for="solubility">
-                            Aqueous Solubility
-                            <span class="tooltip-icon" data-tip="Estimated water solubility. Poor solubility limits both GI absorption and renal clearance.">?</span>
+                            Water Solubility
+                            <span class="tooltip-icon" data-tip="Estimated aqueous (water) solubility. Poor solubility limits GI absorption and renal clearance. High solubility (&gt;1 mg/mL) is preferred.">?</span>
                         </label>
                         <select id="solubility" name="solubility" required>
                             <option value="" disabled selected>Select solubility level</option>
@@ -160,17 +173,28 @@
                         </select>
                     </div>
 
-                    <!-- Enzyme -->
+                    <!-- Bioavailability Score -->
                     <div class="form-group">
-                        <label for="enzyme">
-                            CYP450 Liver Enzyme Interference
-                            <span class="tooltip-icon" data-tip="Degree of CYP450 enzyme inhibition or induction. High interference reduces bioavailability and can cause drug-drug interactions.">?</span>
+                        <label for="bioavailability">
+                            Bioavailability Score
+                            <span class="tooltip-icon" data-tip="Oral bioavailability score (0 – 1). Score ≥ 0.55 indicates good oral bioavailability (Egan egg model). Higher is better.">?</span>
                         </label>
-                        <select id="enzyme" name="enzyme" required>
-                            <option value="" disabled selected>Select interference level</option>
-                            <option value="low">Low (minimal CYP interaction)</option>
-                            <option value="moderate">Moderate (some CYP interaction)</option>
-                            <option value="high">High (significant CYP inhibitor)</option>
+                        <div class="input-wrapper">
+                            <input type="number" id="bioavailability" name="bioavailability" step="0.01" min="0" max="1" required placeholder="e.g., 0.55">
+                            <span class="input-unit">0–1</span>
+                        </div>
+                    </div>
+
+                    <!-- BBB Permeability -->
+                    <div class="form-group">
+                        <label for="bbb_permeability">
+                            BBB Permeability
+                            <span class="tooltip-icon" data-tip="Blood-Brain Barrier permeability. Yes = drug can cross into the CNS. Desirable for CNS drugs; undesirable for peripherally-acting drugs due to CNS side effects.">?</span>
+                        </label>
+                        <select id="bbb_permeability" name="bbb_permeability" required>
+                            <option value="" disabled selected>Select BBB permeability</option>
+                            <option value="yes">Yes (crosses BBB)</option>
+                            <option value="no">No (does not cross BBB)</option>
                         </select>
                     </div>
 
